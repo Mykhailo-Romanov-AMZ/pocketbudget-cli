@@ -1,5 +1,7 @@
 """Domain: budgeting rules and protected account state."""
 
+from typing import Any
+
 from pocketbudget.exceptions import InsufficientFundsError, InvalidAmountError
 
 
@@ -13,18 +15,19 @@ class Account:
 
     def __init__(self) -> None:
         self._balance = 0.0
-        self._transactions: list[object] = []
+        self._transactions: list[Any] = []
 
     @property
     def balance(self) -> float:
         """Current balance. Read-only from outside the class."""
         return self._balance
 
-    def get_transactions(self) -> list[object]:
+    def get_transactions(self) -> list[Any]:
         """Return a copy of the transaction history.
 
         The copy means mutating the returned list can never change the
-        account's own records.
+        account's own records. Entries are (kind, amount) tuples such as
+        ("income", 500.0).
         """
         return list(self._transactions)
 
@@ -32,7 +35,7 @@ class Account:
         """Add a validated income to the balance."""
         self._validate_amount(amount)
         self._balance += amount
-        self._transactions.append(amount)
+        self._transactions.append(("income", amount))
 
     def add_expense(self, amount: float) -> None:
         """Record a validated expense, blocking overdrawing (rules.md, Rule 3)."""
@@ -42,7 +45,7 @@ class Account:
                 f"Cannot spend {amount}: balance is only {self._balance}"
             )
         self._balance -= amount
-        self._transactions.append(amount)
+        self._transactions.append(("expense", amount))
 
     def _validate_amount(self, amount: float) -> None:
         if amount < 0:

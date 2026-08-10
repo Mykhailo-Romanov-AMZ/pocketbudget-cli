@@ -7,3 +7,7 @@ class InvalidAmountError(ValueError):
 
 class InsufficientFundsError(ValueError):
     """Raised when an expense exceeds the available balance (rules.md, Rule 3)."""
+
+
+class DataLoadError(Exception):
+    """Raised when a save file is missing, corrupted, or fails validation."""
