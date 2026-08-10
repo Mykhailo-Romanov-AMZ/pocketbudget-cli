@@ -13,16 +13,26 @@ class Account:
 
     def __init__(self) -> None:
         self._balance = 0.0
+        self._transactions: list[object] = []
 
     @property
     def balance(self) -> float:
         """Current balance. Read-only from outside the class."""
         return self._balance
 
+    def get_transactions(self) -> list[object]:
+        """Return a copy of the transaction history.
+
+        The copy means mutating the returned list can never change the
+        account's own records.
+        """
+        return list(self._transactions)
+
     def add_income(self, amount: float) -> None:
         """Add a validated income to the balance."""
         self._validate_amount(amount)
         self._balance += amount
+        self._transactions.append(amount)
 
     def add_expense(self, amount: float) -> None:
         """Record a validated expense, blocking overdrawing (rules.md, Rule 3)."""
@@ -32,6 +42,7 @@ class Account:
                 f"Cannot spend {amount}: balance is only {self._balance}"
             )
         self._balance -= amount
+        self._transactions.append(amount)
 
     def _validate_amount(self, amount: float) -> None:
         if amount < 0:
