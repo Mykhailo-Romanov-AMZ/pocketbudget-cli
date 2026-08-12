@@ -25,6 +25,7 @@ def save(account: Account, path: str | Path | None = None) -> None:
     data = {
         "balance": account.balance,
         "history": [list(transaction) for transaction in account.get_transactions()],
+        "budgets": account.budgets,
     }
     save_path.parent.mkdir(parents=True, exist_ok=True)
     save_path.write_text(json.dumps(data, indent=2))
@@ -44,6 +45,7 @@ def load(path: str | Path | None = None) -> Account:
     account = Account()
     _replay_history(account, data.get("history"), load_path)
     _check_balance(data.get("balance"), account, load_path)
+    _restore_budgets(account, data.get("budgets"), load_path)
     return account
 
 
@@ -81,7 +83,7 @@ def _apply_entry(account: Account, entry: Any, path: Path) -> None:
         raise DataLoadError(f"Invalid transaction amount in {path}: {amount}")
     try:
         if kind == "income":
-            account.add_income(float(amount))
+            account.add_income(float(amount), category)
         else:
             account.add_expense(float(amount), category)
     except (InvalidAmountError, InsufficientFundsError) as exc:
@@ -99,3 +101,19 @@ def _check_balance(balance: Any, account: Account, path: Path) -> None:
         raise DataLoadError(f"Save file {path} has an invalid balance")
     if balance != account.balance:
         raise DataLoadError(f"Balance in {path} does not match its transaction history")
+
+
+def _restore_budgets(account: Account, budgets: Any, path: Path) -> None:
+    if budgets is None:
+        return
+    if not isinstance(budgets, dict):
+        raise DataLoadError(f"Save file {path} has an invalid budgets map")
+    for category, limit in budgets.items():
+        if not isinstance(limit, (int, float)) or isinstance(limit, bool):
+            raise DataLoadError(f"Invalid budget limit in {path}: {limit}")
+        try:
+            account.set_budget(category, float(limit))
+        except ValueError as exc:
+            raise DataLoadError(
+                f"Save file {path} contains an invalid budget: {exc}"
+            ) from exc

@@ -40,11 +40,13 @@ class Account:
         """
         return list(self._transactions)
 
-    def add_income(self, amount: float) -> None:
+    def add_income(self, amount: float, category: str | None = None) -> None:
         """Add a validated income to the balance."""
         self._validate_amount(amount)
+        if category is not None:
+            self._validate_category(category)
         self._balance += amount
-        self._transactions.append(("income", amount, None))
+        self._transactions.append(("income", amount, category))
 
     def add_expense(self, amount: float, category: str) -> None:
         """Record a validated expense against a category.
@@ -76,6 +78,15 @@ class Account:
     def get_budget(self, category: str) -> float | None:
         """Return the spending limit for a category, or None if unset."""
         return self._budgets.get(category)
+
+    @property
+    def budgets(self) -> dict[str, float]:
+        """Read-only copy of the category budget limits."""
+        return dict(self._budgets)
+
+    def budgeted_categories(self) -> list[str]:
+        """Return the categories that have a budget set, sorted."""
+        return sorted(self._budgets)
 
     def get_remaining_budget(self, category: str) -> float | None:
         """Return the unused budget for a category, or None if no budget is set."""

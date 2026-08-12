@@ -90,3 +90,33 @@ def test_load_rejects_balance_that_contradicts_history(tmp_path: Path) -> None:
 
     with pytest.raises(DataLoadError):
         load(path)
+
+
+def test_load_rebuilds_account_with_saved_budgets(tmp_path: Path) -> None:
+    path = tmp_path / "data" / "budget.json"
+    account = Account()
+    account.add_income(500, "Food")
+    account.set_budget("Food", 200)
+    account.set_budget("Transport", 100)
+    save(account, path)
+
+    loaded = load(path)
+
+    assert loaded.get_budget("Food") == 200
+    assert loaded.get_budget("Transport") == 100
+
+
+def test_load_rejects_invalid_budget(tmp_path: Path) -> None:
+    path = tmp_path / "budget.json"
+    path.write_text(
+        json.dumps(
+            {
+                "balance": 0,
+                "history": [],
+                "budgets": {"Food": -50},
+            }
+        )
+    )
+
+    with pytest.raises(DataLoadError):
+        load(path)
