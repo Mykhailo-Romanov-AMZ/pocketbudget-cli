@@ -17,9 +17,9 @@ def run_cli(
     monkeypatch: pytest.MonkeyPatch,
     tmp_path: Path,
     *args: str,
-) -> None:
+) -> int:
     monkeypatch.chdir(tmp_path)
-    main(list(args))
+    return main(list(args))
 
 
 def output(capsys: pytest.CaptureFixture[str]) -> str:
@@ -167,3 +167,51 @@ def test_show_summary_reports_spending_per_category(
     assert "$150.00" in out
     assert "Transport" in out
     assert "$60.00" in out
+
+
+def test_corrupted_save_file_shows_error_not_traceback(
+    capsys: pytest.CaptureFixture[str],
+    monkeypatch: pytest.MonkeyPatch,
+    tmp_path: Path,
+) -> None:
+    save_dir = tmp_path / "data"
+    save_dir.mkdir()
+    (save_dir / "budget.json").write_text("{ this is not valid json")
+
+    code = run_cli(capsys, monkeypatch, tmp_path, "show-balance")
+    captured = capsys.readouterr()
+
+    assert code == 1
+    assert "Error" in captured.err
+    assert "Traceback" not in captured.out + captured.err
+
+
+def test_corrupted_save_file_blocks_mutation_safely(
+    capsys: pytest.CaptureFixture[str],
+    monkeypatch: pytest.MonkeyPatch,
+    tmp_path: Path,
+) -> None:
+    save_dir = tmp_path / "data"
+    save_dir.mkdir()
+    (save_dir / "budget.json").write_text("{ this is not valid json")
+
+    code = run_cli(capsys, monkeypatch, tmp_path, "add-income", "100", "Food")
+    captured = capsys.readouterr()
+
+    assert code == 1
+    assert "Error" in captured.err
+    assert "Traceback" not in captured.out + captured.err
+
+
+def test_non_numeric_amount_shows_error_not_traceback(
+    capsys: pytest.CaptureFixture[str],
+    monkeypatch: pytest.MonkeyPatch,
+    tmp_path: Path,
+) -> None:
+    code = run_cli(capsys, monkeypatch, tmp_path, "add-income", "abc", "Food")
+    captured = capsys.readouterr()
+
+    assert code == 1
+    assert "Error" in captured.err
+    assert "not a valid amount" in captured.err
+    assert "Traceback" not in captured.out + captured.err

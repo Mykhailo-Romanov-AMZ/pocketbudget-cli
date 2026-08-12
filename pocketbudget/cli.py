@@ -3,14 +3,31 @@
 import sys
 from typing import Callable, Sequence
 
+from pocketbudget.exceptions import (
+    DataLoadError,
+    InsufficientFundsError,
+    InvalidAmountError,
+    InvalidCategoryError,
+    OverBudgetError,
+)
 from pocketbudget.storage import load, save
+
+_HANDLED_ERRORS = (
+    InvalidAmountError,
+    InsufficientFundsError,
+    InvalidCategoryError,
+    OverBudgetError,
+    DataLoadError,
+    OSError,
+)
 
 
 def main(argv: Sequence[str] | None = None) -> int:
     """Route the given command (or sys.argv) through the app lifecycle.
 
     Every command loads the saved state, runs the domain operation, then
-    saves the result.
+    saves the result. Domain errors bubble up to this interface layer, where
+    they are translated into messages a user can act on - never tracebacks.
     """
     args = list(sys.argv[1:] if argv is None else argv)
     if not args:
@@ -36,14 +53,13 @@ def _add_income(args: list[str]) -> int:
     if len(args) != 2:
         print("Usage: add-income <amount> <category>", file=sys.stderr)
         return 1
-    account = load()
     try:
-        amount = float(args[0])
+        account = load()
+        amount = _parse_amount(args[0])
         account.add_income(amount, args[1])
-    except ValueError as exc:
-        print(f"Error: {exc}", file=sys.stderr)
-        return 1
-    save(account)
+        save(account)
+    except _HANDLED_ERRORS as exc:
+        return _report_error(exc)
     print(
         f"Income of {_format_money(amount)} recorded. "
         f"Balance: {_format_money(account.balance)}"
@@ -55,14 +71,13 @@ def _add_expense(args: list[str]) -> int:
     if len(args) != 2:
         print("Usage: add-expense <amount> <category>", file=sys.stderr)
         return 1
-    account = load()
     try:
-        amount = float(args[0])
+        account = load()
+        amount = _parse_amount(args[0])
         account.add_expense(amount, args[1])
-    except ValueError as exc:
-        print(f"Error: {exc}", file=sys.stderr)
-        return 1
-    save(account)
+        save(account)
+    except _HANDLED_ERRORS as exc:
+        return _report_error(exc)
     print(
         f"Expense of {_format_money(amount)} recorded. "
         f"Balance: {_format_money(account.balance)}"
@@ -71,13 +86,19 @@ def _add_expense(args: list[str]) -> int:
 
 
 def _show_balance(args: list[str]) -> int:
-    account = load()
+    try:
+        account = load()
+    except _HANDLED_ERRORS as exc:
+        return _report_error(exc)
     print(f"Balance: {_format_money(account.balance)}")
     return 0
 
 
 def _show_history(args: list[str]) -> int:
-    account = load()
+    try:
+        account = load()
+    except _HANDLED_ERRORS as exc:
+        return _report_error(exc)
     for kind, amount, category in account.get_transactions():
         if category:
             print(f"{kind}: {_format_money(amount)} ({category})")
@@ -90,20 +111,22 @@ def _set_budget(args: list[str]) -> int:
     if len(args) != 2:
         print("Usage: set-budget <category> <limit>", file=sys.stderr)
         return 1
-    account = load()
     try:
-        limit = float(args[1])
+        account = load()
+        limit = _parse_amount(args[1])
         account.set_budget(args[0], limit)
-    except ValueError as exc:
-        print(f"Error: {exc}", file=sys.stderr)
-        return 1
-    save(account)
+        save(account)
+    except _HANDLED_ERRORS as exc:
+        return _report_error(exc)
     print(f"Budget set for {args[0]}: {_format_money(limit)}")
     return 0
 
 
 def _show_summary(args: list[str]) -> int:
-    account = load()
+    try:
+        account = load()
+    except _HANDLED_ERRORS as exc:
+        return _report_error(exc)
     for category in account.budgeted_categories():
         limit = account.get_budget(category)
         remaining = account.get_remaining_budget(category)
@@ -113,6 +136,18 @@ def _show_summary(args: list[str]) -> int:
                 f"of {_format_money(limit)}"
             )
     return 0
+
+
+def _parse_amount(raw: str) -> float:
+    try:
+        return float(raw)
+    except ValueError as exc:
+        raise InvalidAmountError(f"{raw!r} is not a valid amount") from exc
+
+
+def _report_error(exc: Exception) -> int:
+    print(f"Error: {exc}", file=sys.stderr)
+    return 1
 
 
 def _format_money(amount: float) -> str:

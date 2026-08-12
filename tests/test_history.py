@@ -35,3 +35,15 @@ def test_mutating_returned_history_does_not_change_account() -> None:
     current = account.get_transactions()
     assert current == pristine
     assert len(current) == original_count
+
+
+def test_mutating_returned_budgets_does_not_change_account() -> None:
+    account = Account()
+    account.set_budget("Food", 200)
+
+    budgets = account.budgets
+    budgets["Food"] = 9999
+    budgets["Transport"] = 123
+
+    assert account.get_budget("Food") == 200
+    assert account.get_budget("Transport") is None

@@ -78,7 +78,7 @@ def test_load_with_valid_json_but_wrong_shape_raises_data_load_error(
 
 def test_load_validates_data_like_live_data(tmp_path: Path) -> None:
     path = tmp_path / "budget.json"
-    path.write_text(json.dumps({"balance": 100, "history": [["income", -50]]}))
+    path.write_text(json.dumps({"balance": 100, "history": [["income", -50, None]]}))
 
     with pytest.raises(DataLoadError):
         load(path)
@@ -86,7 +86,7 @@ def test_load_validates_data_like_live_data(tmp_path: Path) -> None:
 
 def test_load_rejects_balance_that_contradicts_history(tmp_path: Path) -> None:
     path = tmp_path / "budget.json"
-    path.write_text(json.dumps({"balance": 9999, "history": [["income", 100]]}))
+    path.write_text(json.dumps({"balance": 9999, "history": [["income", 100, None]]}))
 
     with pytest.raises(DataLoadError):
         load(path)

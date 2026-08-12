@@ -11,6 +11,9 @@ from pocketbudget.exceptions import (
 
 ALLOWED_CATEGORIES = frozenset({"Food", "Transport"})
 
+KIND_INCOME = "income"
+KIND_EXPENSE = "expense"
+
 
 class Account:
     """Single source of truth for the balance.
@@ -46,7 +49,7 @@ class Account:
         if category is not None:
             self._validate_category(category)
         self._balance += amount
-        self._transactions.append(("income", amount, category))
+        self._transactions.append((KIND_INCOME, amount, category))
 
     def add_expense(self, amount: float, category: str) -> None:
         """Record a validated expense against a category.
@@ -67,7 +70,7 @@ class Account:
                 f"{remaining} for {category}"
             )
         self._balance -= amount
-        self._transactions.append(("expense", amount, category))
+        self._transactions.append((KIND_EXPENSE, amount, category))
 
     def set_budget(self, category: str, limit: float) -> None:
         """Set the spending limit for a category."""
@@ -98,7 +101,7 @@ class Account:
     def _spent_on(self, category: str) -> float:
         spent = 0.0
         for transaction in self._transactions:
-            if transaction[0] == "expense" and transaction[2] == category:
+            if transaction[0] == KIND_EXPENSE and transaction[2] == category:
                 spent += transaction[1]
         return spent
 
