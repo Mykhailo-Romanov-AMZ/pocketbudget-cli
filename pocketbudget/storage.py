@@ -9,6 +9,8 @@ from pocketbudget.exceptions import (
     DataLoadError,
     InsufficientFundsError,
     InvalidAmountError,
+    InvalidCategoryError,
+    OverBudgetError,
 )
 
 DEFAULT_PATH = Path("data") / "budget.json"
@@ -70,9 +72,9 @@ def _replay_history(account: Account, history: Any, path: Path) -> None:
 
 
 def _apply_entry(account: Account, entry: Any, path: Path) -> None:
-    if not isinstance(entry, list) or len(entry) != 2:
+    if not isinstance(entry, list) or len(entry) != 3:
         raise DataLoadError(f"Invalid transaction entry in {path}: {entry}")
-    kind, amount = entry
+    kind, amount, category = entry
     if kind not in ("income", "expense"):
         raise DataLoadError(f"Unknown transaction kind in {path}: {kind}")
     if not isinstance(amount, (int, float)) or isinstance(amount, bool):
@@ -81,8 +83,12 @@ def _apply_entry(account: Account, entry: Any, path: Path) -> None:
         if kind == "income":
             account.add_income(float(amount))
         else:
-            account.add_expense(float(amount))
+            account.add_expense(float(amount), category)
     except (InvalidAmountError, InsufficientFundsError) as exc:
+        raise DataLoadError(
+            f"Save file {path} contains an invalid transaction: {exc}"
+        ) from exc
+    except (InvalidCategoryError, OverBudgetError) as exc:
         raise DataLoadError(
             f"Save file {path} contains an invalid transaction: {exc}"
         ) from exc

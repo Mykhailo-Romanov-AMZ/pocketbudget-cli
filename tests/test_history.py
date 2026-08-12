@@ -11,7 +11,7 @@ from pocketbudget.account import Account
 def test_get_transactions_returns_a_new_list_each_time() -> None:
     account = Account()
     account.add_income(100)
-    account.add_expense(30)
+    account.add_expense(30, "Food")
 
     first = account.get_transactions()
     second = account.get_transactions()
@@ -23,7 +23,7 @@ def test_get_transactions_returns_a_new_list_each_time() -> None:
 def test_mutating_returned_history_does_not_change_account() -> None:
     account = Account()
     account.add_income(100)
-    account.add_expense(30)
+    account.add_expense(30, "Food")
 
     pristine = account.get_transactions()
     original_count = len(pristine)

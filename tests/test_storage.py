@@ -20,7 +20,7 @@ from pocketbudget.storage import load, save
 def _populated_account() -> Account:
     account = Account()
     account.add_income(500)
-    account.add_expense(120)
+    account.add_expense(120, "Food")
     return account
 
 

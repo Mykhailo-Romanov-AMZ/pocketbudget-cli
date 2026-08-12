@@ -40,7 +40,7 @@ def test_add_income_increases_balance() -> None:
 def test_add_expense_decreases_balance() -> None:
     account = Account()
     account.add_income(300)
-    account.add_expense(120)
+    account.add_expense(120, "Food")
     assert account.balance == 180
 
 
@@ -55,7 +55,7 @@ def test_negative_expense_is_rejected() -> None:
     account = Account()
     account.add_income(100)
     with pytest.raises(InvalidAmountError):
-        account.add_expense(-20)
+        account.add_expense(-20, "Food")
     assert account.balance == 100
 
 
@@ -63,12 +63,12 @@ def test_overdrawing_is_blocked() -> None:
     account = Account()
     account.add_income(100)
     with pytest.raises(InsufficientFundsError):
-        account.add_expense(150)
+        account.add_expense(150, "Food")
     assert account.balance == 100
 
 
 def test_expense_matching_balance_is_allowed() -> None:
     account = Account()
     account.add_income(100)
-    account.add_expense(100)
+    account.add_expense(100, "Food")
     assert account.balance == 0
